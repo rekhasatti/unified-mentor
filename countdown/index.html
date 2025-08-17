@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Countdown Timer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .input-section {
+            margin-bottom: 40px;
+        }
+
+        .datetime-input {
+            width: 100%;
+            max-width: 300px;
+            padding: 15px;
+            font-size: 1.1rem;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .datetime-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .countdown-display {
+            margin: 40px 0;
+        }
+
+        .time-units {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .time-unit {
+            background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            padding: 20px 10px;
+            box-shadow: 
+                inset 5px 5px 10px #d1d5db,
+                inset -5px -5px 10px #ffffff;
+            transition: transform 0.3s ease;
+        }
+
+        .time-unit:hover {
+            transform: scale(1.05);
+        }
+
+        .time-value {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #333;
+            display: block;
+            margin-bottom: 5px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .time-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .status-message {
+            font-size: 1.2rem;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        .status-expired {
+            background: linear-gradient(45deg, #dc3545, #fd7e14);
+            color: white;
+            animation: celebration 1s ease-in-out;
+        }
+
+        .status-stopped {
+            background: #6c757d;
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes celebration {
+            0%, 100% { transform: scale(1); }
+            25% { transform: scale(1.05) rotate(1deg); }
+            75% { transform: scale(1.05) rotate(-1deg); }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .error-message {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            .title {
+                font-size: 2rem;
+            }
+
+            .time-units {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+
+            .time-value {
+                font-size: 2rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 200px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .time-units {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .time-unit {
+                padding: 15px 10px;
+            }
+
+            .time-value {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">Countdown Timer</h1>
+            <p class="subtitle">Set your target date and watch the magic happen!</p>
+        </div>
+
+        <div class="input-section">
+            <input type="datetime-local" id="targetDateTime" class="datetime-input" />
+            <div class="error-message" id="errorMessage"></div>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" id="startBtn">Start Timer</button>
+                <button class="btn btn-secondary" id="pauseBtn">Pause</button>
+                <button class="btn btn-danger" id="resetBtn">Reset</button>
+            </div>
+        </div>
+
+        <div class="countdown-display">
+            <div class="time-units">
+                <div class="time-unit">
+                    <span class="time-value" id="days">00</span>
+                    <span class="time-label">Days</span>
+                </div>
+                <div class="time-unit">
+                    <span class="time-value" id="hours">00</span>
+                    <span class="time-label">Hours</span>
+                </div>
+                <div class="time-unit">
+                    <span class="time-value" id="minutes">00</span>
+                    <span class="time-label">Minutes</span>
+                </div>
+                <div class="time-unit">
+                    <span class="time-value" id="seconds">00</span>
+                    <span class="time-label">Seconds</span>
+                </div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <div class="status-message" id="statusMessage">
+                Set a date and time to begin countdown
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CountdownTimer {
+            constructor() {
+                this.targetDate = null;
+                this.startDate = null;
+                this.intervalId = null;
+                this.isRunning = false;
+                this.isPaused = false;
+                
+                this.initializeElements();
+                this.attachEventListeners();
+                this.setDefaultDateTime();
+            }
+
+            initializeElements() {
+                this.elements = {
+                    targetDateTime: document.getElementById('targetDateTime'),
+                    startBtn: document.getElementById('startBtn'),
+                    pauseBtn: document.getElementById('pauseBtn'),
+                    resetBtn: document.getElementById('resetBtn'),
+                    days: document.getElementById('days'),
+                    hours: document.getElementById('hours'),
+                    minutes: document.getElementById('minutes'),
+                    seconds: document.getElementById('seconds'),
+                    statusMessage: document.getElementById('statusMessage'),
+                    errorMessage: document.getElementById('errorMessage'),
+                    progressFill: document.getElementById('progressFill')
+                };
+            }
+
+            attachEventListeners() {
+                this.elements.startBtn.addEventListener('click', () => this.toggleTimer());
+                this.elements.pauseBtn.addEventListener('click', () => this.pauseTimer());
+                this.elements.resetBtn.addEventListener('click', () => this.resetTimer());
+                this.elements.targetDateTime.addEventListener('change', () => this.hideError());
+            }
+
+            setDefaultDateTime() {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                tomorrow.setHours(12, 0, 0, 0);
+                
+                const year = tomorrow.getFullYear();
+                const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+                const date = String(tomorrow.getDate()).padStart(2, '0');
+                const hours = String(tomorrow.getHours()).padStart(2, '0');
+                const minutes = String(tomorrow.getMinutes()).padStart(2, '0');
+                
+                this.elements.targetDateTime.value = `${year}-${month}-${date}T${hours}:${minutes}`;
+            }
+
+            validateDateTime() {
+                const selectedDateTime = this.elements.targetDateTime.value;
+                
+                if (!selectedDateTime) {
+                    this.showError('Please select a date and time');
+                    return false;
+                }
+
+                const targetDate = new Date(selectedDateTime);
+                const now = new Date();
+
+                if (targetDate <= now) {
+                    this.showError('Please select a future date and time');
+                    return false;
+                }
+
+                return true;
+            }
+
+            showError(message) {
+                this.elements.errorMessage.textContent = message;
+                this.elements.errorMessage.style.display = 'block';
+            }
+
+            hideError() {
+                this.elements.errorMessage.style.display = 'none';
+            }
+
+            toggleTimer() {
+                if (!this.isRunning) {
+                    this.startTimer();
+                } else {
+                    this.stopTimer();
+                }
+            }
+
+            startTimer() {
+                if (!this.validateDateTime()) return;
+
+                this.hideError();
+                this.targetDate = new Date(this.elements.targetDateTime.value);
+                this.startDate = new Date();
+                this.isRunning = true;
+                this.isPaused = false;
+
+                this.elements.startBtn.textContent = 'Stop Timer';
+                this.elements.startBtn.className = 'btn btn-danger';
+                this.elements.pauseBtn.disabled = false;
+                this.elements.targetDateTime.disabled = true;
+
+                this.intervalId = setInterval(() => this.updateDisplay(), 1000);
+                this.updateDisplay();
+            }
+
+            pauseTimer() {
+                if (this.isRunning && !this.isPaused) {
+                    clearInterval(this.intervalId);
+                    this.isPaused = true;
+                    this.elements.pauseBtn.textContent = 'Resume';
+                    this.updateStatusMessage('Timer Paused', 'status-stopped');
+                } else if (this.isPaused) {
+                    this.intervalId = setInterval(() => this.updateDisplay(), 1000);
+                    this.isPaused = false;
+                    this.elements.pauseBtn.textContent = 'Pause';
+                    this.updateDisplay();
+                }
+            }
+
+            stopTimer() {
+                clearInterval(this.intervalId);
+                this.isRunning = false;
+                this.isPaused = false;
+                this.targetDate = null;
+                this.startDate = null;
+
+                this.elements.startBtn.textContent = 'Start Timer';
+                this.elements.startBtn.className = 'btn btn-primary';
+                this.elements.pauseBtn.textContent = 'Pause';
+                this.elements.pauseBtn.disabled = true;
+                this.elements.targetDateTime.disabled = false;
+
+                this.resetDisplay();
+                this.updateStatusMessage('Timer Stopped', 'status-stopped');
+            }
+
+            resetTimer() {
+                this.stopTimer();
+                this.hideError();
+                this.setDefaultDateTime();
+                this.updateStatusMessage('Set a date and time to begin countdown', '');
+                this.elements.progressFill.style.width = '0%';
+            }
+
+            updateDisplay() {
+                if (!this.targetDate || this.isPaused) return;
+
+                const now = new Date();
+                const timeDiff = this.targetDate - now;
+
+                if (timeDiff <= 0) {
+                    this.handleTimerExpired();
+                    return;
+                }
+
+                const timeUnits = this.calculateTimeUnits(timeDiff);
+                this.displayTimeUnits(timeUnits);
+                this.updateProgress();
+                this.updateStatusMessage(`Counting down to ${this.formatTargetDate()}`, 'status-active');
+            }
+
+            calculateTimeUnits(timeDiff) {
+                const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+                return { days, hours, minutes, seconds };
+            }
+
+            displayTimeUnits({ days, hours, minutes, seconds }) {
+                this.elements.days.textContent = String(days).padStart(2, '0');
+                this.elements.hours.textContent = String(hours).padStart(2, '0');
+                this.elements.minutes.textContent = String(minutes).padStart(2, '0');
+                this.elements.seconds.textContent = String(seconds).padStart(2, '0');
+            }
+
+            updateProgress() {
+                if (!this.targetDate || !this.startDate) return;
+
+                const totalDuration = this.targetDate - this.startDate;
+                const elapsed = new Date() - this.startDate;
+                const progress = Math.min((elapsed / totalDuration) * 100, 100);
+
+                this.elements.progressFill.style.width = `${progress}%`;
+            }
+
+            handleTimerExpired() {
+                this.displayTimeUnits({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+                this.updateStatusMessage('🎉 Time\'s Up! Your countdown has ended! 🎉', 'status-expired');
+                this.elements.progressFill.style.width = '100%';
+                
+                // Play celebration animation
+                this.celebrateCompletion();
+                
+                // Auto-reset after celebration
+                setTimeout(() => this.resetTimer(), 5000);
+            }
+
+            celebrateCompletion() {
+                // Add celebration effects
+                const timeUnits = document.querySelectorAll('.time-unit');
+                timeUnits.forEach((unit, index) => {
+                    setTimeout(() => {
+                        unit.style.animation = 'celebration 0.6s ease-in-out';
+                    }, index * 100);
+                });
+
+                // Reset animations after celebration
+                setTimeout(() => {
+                    timeUnits.forEach(unit => {
+                        unit.style.animation = '';
+                    });
+                }, 2000);
+            }
+
+            resetDisplay() {
+                this.displayTimeUnits({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+            }
+
+            updateStatusMessage(message, className) {
+                this.elements.statusMessage.textContent = message;
+                this.elements.statusMessage.className = `status-message ${className}`;
+            }
+
+            formatTargetDate() {
+                if (!this.targetDate) return '';
+                
+                return this.targetDate.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+        }
+
+        // Initialize the countdown timer when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new CountdownTimer();
+        });
+
+        // Add some visual enhancements
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add subtle floating animation to time units
+            const timeUnits = document.querySelectorAll('.time-unit');
+            timeUnits.forEach((unit, index) => {
+                unit.style.animationDelay = `${index * 0.1}s`;
+            });
+
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('startBtn').click();
+                } else if (e.key === ' ') {
+                    e.preventDefault();
+                    document.getElementById('pauseBtn').click();
+                } else if (e.key === 'Escape') {
+                    document.getElementById('resetBtn').click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

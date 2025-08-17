@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WeatherSphere | Real-time Forecast</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #1a2a6c, #2a5ba8, #1a2a6c);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+    
+    @keyframes gradientBG {
+      0% { background-position: 0% 50% }
+      50% { background-position: 100% 50% }
+      100% { background-position: 0% 50% }
+    }
+    
+    .weather-card {
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      transform: translateY(0);
+      transition: transform 0.3s ease;
+    }
+    
+    .weather-card:hover {
+      transform: translateY(-5px);
+    }
+    
+    .weather-icon-container {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 50%;
+      padding: 0.5rem;
+      display: flex;
+      margin: 0 auto;
+    }
+    
+    .temperature {
+      font-size: 3.5rem;
+      font-weight: 700;
+      background: linear-gradient(45deg, #ffffff, #e4f0ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .search-bar {
+      transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+    
+    .search-bar:focus-within {
+      transform: scale(1.02);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+    
+    .stats-card {
+      backdrop-filter: blur(14px) saturate(160%);
+      -webkit-backdrop-filter: blur(14px) saturate(160%);
+      background-color: rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .location-btn {
+      transition: all 0.2s ease;
+      transform: scale(1);
+    }
+    
+    .location-btn:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-8 px-4">
+  <div class="max-w-4xl w-full">
+    <div class="text-center mb-8">
+      <h1 class="text-4xl md:text-5xl font-bold text-white tracking-tight">WeatherSphere</h1>
+      <p class="text-xl text-sky-100">Real-time global weather forecasts</p>
+    </div>
+
+    <div class="mb-6 flex justify-center relative">
+      <div class="search-bar flex bg-white rounded-full overflow-hidden w-full max-w-lg shadow-lg">
+        <input 
+          type="text" 
+          id="city-input"
+          placeholder="Search city..." 
+          class="flex-grow py-4 px-6 outline-none text-lg text-gray-800 placeholder-gray-400"
+        />
+        <button id="search-btn" class="bg-blue-600 text-white px-6 hover:bg-blue-700 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
+      </div>
+      <button id="location-btn" class="location-btn absolute right-0 top-1/2 -translate-y-1/2 mr-2 bg-white bg-opacity-30 p-2 rounded-full hover:bg-opacity-40">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="weather-card p-6 md:p-8 mb-6">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="text-center md:text-left mb-6 md:mb-0 w-full md:w-1/2">
+          <div id="city" class="text-3xl font-bold text-white mb-1">New York</div>
+          <div id="date" class="text-lg text-sky-100 mb-4">Friday, 24 May 2024</div>
+          <div class="flex items-center justify-center md:justify-start">
+            <div id="temperature" class="temperature">24°</div>
+            <div id="weather-desc" class="ml-2 text-xl font-medium text-white">Sunny</div>
+          </div>
+        </div>
+        <div class="weather-icon-container">
+          <img id="weather-icon" src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/f6b5037c-ff79-4efa-bcbd-8491f80717b1.png" alt="Sun with clear blue sky" class="w-32 h-32 object-contain" />
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="stats-card p-4 flex flex-col items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-sky-400 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+        </svg>
+        <div class="text-sky-100 text-sm mb-1">Humidity</div>
+        <div id="humidity" class="text-white font-semibold">65%</div>
+      </div>
+      <div class="stats-card p-4 flex flex-col items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-sky-400 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <div class="text-sky-100 text-sm mb-1">Wind</div>
+        <div id="wind" class="text-white font-semibold">12 km/h</div>
+      </div>
+      <div class="stats-card p-4 flex flex-col items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
+        </svg>
+        <div class="text-sky-100 text-sm mb-1">Feels Like</div>
+        <div id="feels-like" class="text-white font-semibold">25°</div>
+      </div>
+      <div class="stats-card p-4 flex flex-col items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+        <div class="text-sky-100 text-sm mb-1">Visibility</div>
+        <div id="visibility" class="text-white font-semibold">16 km</div>
+      </div>
+    </div>
+
+    <div class="weather-card p-6">
+      <h2 class="text-xl font-bold text-white mb-4 text-center">5-DAY FORECAST</h2>
+      <div id="forecast-container" class="grid grid-cols-5 gap-2">
+        <!-- Forecast items will be added by JS -->
+        <div class="text-center py-2">
+          <div class="text-white font-medium">Sat</div>
+          <div class="flex justify-center my-2">
+            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/a20f0f31-5d30-4327-b4a6-55a6b597d2c8.png" alt="Partly cloudy with sun" class="w-8 h-8 object-contain" />
+          </div>
+          <div class="text-white">22°/18°</div>
+        </div>
+        <div class="text-center py-2">
+          <div class="text-white font-medium">Sun</div>
+          <div class="flex justify-center my-2">
+            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/d0ffa6fc-646f-485b-9597-31203f3c27cc.png" alt="Cloudy with light rain" class="w-8 h-8 object-contain" />
+          </div>
+          <div class="text-white">20°/16°</div>
+        </div>
+        <div class="text-center py-2">
+          <div class="text-white font-medium">Mon</div>
+          <div class="flex justify-center my-2">
+            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/8038e29f-010f-4939-82ee-934df26ce56b.png" alt="Sunny intervals" class="w-8 h-8 object-contain" />
+          </div>
+          <div class="text-white">23°/18°</div>
+        </div>
+        <div class="text-center py-2">
+          <div class="text-white font-medium">Tue</div>
+          <div class="flex justify-center my-2">
+            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/160142cb-5f68-4c44-9cb4-ed75f45f027c.png" alt="Clear sky at night" class="w-8 h-8 object-contain" />
+          </div>
+          <div class="text-white">26°/20°</div>
+        </div>
+        <div class="text-center py-2">
+          <div class="text-white font-medium">Wed</div>
+          <div class="flex justify-center my-2">
+            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/bb828a3e-6380-4320-a076-dae731428d13.png" alt="Sunny and hot weather" class="w-8 h-8 object-contain" />
+          </div>
+          <div class="text-white">29°/24°</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // DOM elements
+      const cityInput = document.getElementById('city-input');
+      const searchBtn = document.getElementById('search-btn');
+      const locationBtn = document.getElementById('location-btn');
+      const cityElement = document.getElementById('city');
+      const dateElement = document.getElementById('date');
+      const temperatureElement = document.getElementById('temperature');
+      const weatherDescElement = document.getElementById('weather-desc');
+      const weatherIcon = document.getElementById('weather-icon');
+      const humidityElement = document.getElementById('humidity');
+      const windElement = document.getElementById('wind');
+      const feelsLikeElement = document.getElementById('feels-like');
+      const visibilityElement = document.getElementById('visibility');
+      const forecastContainer = document.getElementById('forecast-container');
+      
+      // Initialize with default city
+      updateWeather('New York');
+      
+      // Event listeners
+      searchBtn.addEventListener('click', () => {
+        const city = cityInput.value.trim();
+        if (city) {
+          updateWeather(city);
+        }
+      });
+      
+      locationBtn.addEventListener('click', () => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            position => {
+              const { latitude, longitude } = position.coords;
+              getCityFromCoords(latitude, longitude);
+            },
+            error => {
+              alert('Unable to get your location: ' + error.message);
+            }
+          );
+        } else {
+          alert('Geolocation is not supported by your browser.');
+        }
+      });
+      
+      cityInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          searchBtn.click();
+        }
+      });
+      
+      // Functions
+      async function updateWeather(city) {
+        try {
+          // Simulate API call (in a real app, you'd use a weather API)
+          const weatherData = generateWeatherData(city);
+          updateUI(weatherData);
+          
+          // Clear input
+          cityInput.value = '';
+        } catch (error) {
+          console.error('Error fetching weather data:', error);
+          alert('Failed to fetch weather data. Please try again.');
+        }
+      }
+      
+      async function getCityFromCoords(lat, lon) {
+        try {
+          // In a real app, reverse geocoding API would be used
+          const cities = [
+            "New York", "London", "Tokyo", "Sydney", "Paris", 
+            "Berlin", "Moscow", "Dubai", "Singapore", "Beijing"
+          ];
+          const randomCity = cities[Math.floor(Math.random() * cities.length)];
+          updateWeather(randomCity);
+        } catch (error) {
+          console.error('Error getting city:', error);
+          alert('Failed to determine your city. Please enter it manually.');
+        }
+      }
+      
+      function updateUI(data) {
+        cityElement.textContent = data.city;
+        dateElement.textContent = new Date().toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        temperatureElement.textContent = `${data.temperature}°`;
+        weatherDescElement.textContent = data.description;
+        weatherIcon.setAttribute('alt', data.description);
+        humidityElement.textContent = `${data.humidity}%`;
+        windElement.textContent = `${data.wind} km/h`;
+        feelsLikeElement.textContent = `${data.feelsLike}°`;
+        visibilityElement.textContent = `${data.visibility} km`;
+        
+        // Update forecast
+        forecastContainer.innerHTML = '';
+        data.forecast.forEach(day => {
+          const forecastItem = document.createElement('div');
+          forecastItem.className = 'text-center py-2';
+          forecastItem.innerHTML = `
+            <div class="text-white font-medium">${day.day}</div>
+            <div class="flex justify-center my-2">
+              <img src="${day.icon}" alt="${day.alt}" class="w-8 h-8 object-contain" />
+            </div>
+            <div class="text-white">${day.high}°/${day.low}°</div>
+          `;
+          forecastContainer.appendChild(forecastItem);
+        });
+      }
+      
+      function generateWeatherData(city) {
+        // Simulated data - in a real app this would come from an API
+        const weatherTypes = [
+          { 
+            name: 'sunny', 
+            desc: 'Sunny', 
+            temp: 22, 
+            icon: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/f5b9eadb-a73c-4462-b8b3-35977eb81c97.png', 
+            alt: 'Golden sun shining in a clear blue sky' 
+          },
+          { 
+            name: 'cloudy', 
+            desc: 'Cloudy', 
+            temp: 18, 
+            icon: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/95e1b4c6-ceb0-41e8-8ae0-af6f5e57c3a2.png', 
+            alt: 'Gray clouds covering most of the sky' 
+          },
+          { 
+            name: 'rainy', 
+            desc: 'Rainy', 
+            temp: 15, 
+            icon: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/3f601eb6-6a1a-476a-a1ae-ca9374ddbf36.png', 
+            alt: 'Rain falling from dark clouds' 
+          },
+          { 
+            name: 'stormy', 
+            desc: 'Stormy', 
+            temp: 17, 
+            icon: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/da41a299-fe56-4c3e-82cd-46e862253c6d.png', 
+            alt: 'Lightning striking with heavy dark clouds' 
+          },
+          { 
+            name: 'snowy', 
+            desc: 'Snowy', 
+            temp: -3, 
+            icon: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/da80170c-e43b-4f98-a691-25295f072705.png', 
+            alt: 'Snowflakes falling over a winter landscape' 
+          },
+          { 
+            name: 'partly-cloudy', 
+            desc: 'Partly Cloudy', 
+            temp: 20, 
+            icon: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/87e221de-814f-418f-bd72-b4828ff47d5e.png', 
+            alt: 'Sun partially covered by scattered clouds' 
+          }
+        ];
+        
+        const weather = weatherTypes[Math.floor(Math.random() * weatherTypes.length)];
+        
+        // Generate forecast
+        const forecast = [];
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const today = new Date().getDay();
+        
+        for (let i = 1; i <= 5; i++) {
+          const forecastDay = (today + i) % 7;
+          const forecastType = weatherTypes[Math.floor(Math.random() * weatherTypes.length)];
+          const forecastAlts = {
+            'sunny': `Sun symbol with clear sky forecast for ${days[forecastDay]}`,
+            'cloudy': `Cloud symbol indicating cloudy conditions on ${days[forecastDay]}`,
+            'rainy': `Rain cloud symbol for ${days[forecastDay]}'s forecast`,
+            'stormy': `Thunderstorm symbol for ${days[forecastDay]}`,
+            'snowy': `Snowflake symbol for ${days[forecastDay]}`,
+            'partly-cloudy': `Partly cloudy symbol with sun for ${days[forecastDay]}`
+          };
+          
+          forecast.push({
+            day: days[forecastDay],
+            icon: forecastType.icon,
+            alt: forecastAlts[forecastType.name] || forecastType.desc,
+            high: Math.floor(Math.random() * 10) + 20,
+            low: Math.floor(Math.random() * 10) + 10
+          });
+        }
+        
+        return {
+          city: city,
+          temperature: weather.temp,
+          description: weather.desc,
+          icon: weather.icon,
+          humidity: Math.floor(Math.random() * 30) + 50,
+          wind: Math.floor(Math.random() * 15) + 5,
+          feelsLike: weather.temp + Math.floor(Math.random() * 3) - 1,
+          visibility: Math.floor(Math.random() * 10) + 10,
+          forecast: forecast
+        };
+      }
+    });
+  </script>
+</body>
+</html>
