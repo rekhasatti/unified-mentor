@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatSync - Real-time Chat Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .chat-container {
+            max-height: 80vh;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.2) transparent;
+        }
+
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+
+        .message {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .typing-indicator {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        .room-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .notification {
+            animation: slideInFromRight 0.3s ease-out;
+        }
+
+        @keyframes slideInFromRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .scrollable-rooms {
+            flex-grow: 1;
+            overflow-y: auto; 
+            padding-right: 10px; 
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0,0,0,0.2) transparent;
+        }
+
+        .scrollable-rooms::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .scrollable-rooms::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .scrollable-rooms::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.2);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center py-8 px-4">
+    <div class="w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex flex-col lg:flex-row h-[80vh]">
+            <div class="w-full lg:w-1/4 bg-gray-50 border-r border-gray-200 p-6 flex flex-col">
+                <div class="flex items-center justify-between mb-8">
+                    <h1 class="text-2xl font-bold text-gray-800 flex items-center">
+                        <i class="fas fa-comments text-purple-600 mr-3"></i>
+                        ChatSync
+                    </h1>
+                    <div class="relative">
+                        <img src="https://placehold.co/40x40" alt="User profile picture showing a person with friendly smile and professional appearance" class="w-10 h-10 rounded-full cursor-pointer" id="userMenuBtn">
+                        <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1" id="userMenu">
+                            <span class="block px-4 py-2 text-sm text-gray-700">Logged in as: <span id="currentUser"></span></span>
+                            <button onclick="changeUser()" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Change User</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <input type="text" placeholder="Search rooms..." class="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                </div>
+
+                <div class="scrollable-rooms">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                            <i class="fas fa-hashtag text-gray-500 mr-2"></i>
+                            Public Rooms
+                        </h2>
+                        <div class="space-y-2" id="publicRoomList">
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                            <i class="fas fa-lock text-gray-500 mr-2"></i>
+                            Private Rooms
+                        </h2>
+                        <div class="space-y-2" id="privateRoomList">
+                        </div>
+                        <button onclick="showCreatePrivateRoomModal()" class="w-full text-left px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors mt-2">
+                            <i class="fas fa-plus mr-2"></i>Create Private Room
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-auto pt-6 border-t border-gray-200">
+                    <div class="flex items-center text-sm text-gray-600">
+                        <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                        <span id="onlineCount">0 users online</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-1 flex flex-col">
+                <div class="border-b border-gray-200 px-6 py-4">
+                    <h2 class="text-xl font-semibold text-gray-800" id="currentRoom">Select a room to start chatting</h2>
+                    <p class="text-sm text-gray-600" id="roomDescription">Choose from available public or private rooms</p>
+                </div>
+                <div class="flex-1 overflow-hidden">
+                    <div class="chat-container h-full p-6 space-y-4" id="messagesContainer">
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-comments text-4xl mb-3 text-gray-300"></i>
+                            <p>Welcome to ChatSync! Select a room to start chatting with others.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="border-t border-gray-200 p-6 bg-gray-50">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-1 bg-white border border-gray-300 rounded-lg p-2">
+                            <input 
+                                type="text" 
+                                placeholder="Type your message..." 
+                                class="w-full px-3 py-2 outline-none"
+                                id="messageInput"
+                                disabled
+                            >
+                        </div>
+                        <button 
+                            class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            id="sendButton"
+                            disabled
+                        >
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <div class="mt-2 text-sm text-gray-500 hidden" id="typingIndicator">
+                        <span id="typingUsers"></span> is typing...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" id="userModal">
+        <div class="bg-white rounded-lg p-6 w-96">
+            <h3 class="text-xl font-semibold mb-4">Choose Your Username</h3>
+            <input type="text" placeholder="Enter your username..." class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4" id="usernameInput" maxlength="20">
+            <div class="flex justify-end space-x-3">
+                <button onclick="setUsername()" class="px-6 py-2 bg-purple-600 text-white rounded-lg">Join Chat</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" id="createPrivateRoomModal">
+        <div class="bg-white rounded-lg p-6 w-96">
+            <h3 class="text-xl font-semibold mb-4">Create Private Room</h3>
+            <input type="text" placeholder="Room Name" class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3" id="newPrivateRoomName" maxlength="30">
+            <input type="password" placeholder="Password (optional)" class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4" id="newPrivateRoomPassword">
+            <div class="flex justify-end space-x-3">
+                <button onclick="hideCreatePrivateRoomModal()" class="px-6 py-2 bg-gray-300 text-gray-800 rounded-lg">Cancel</button>
+                <button onclick="createPrivateRoom()" class="px-6 py-2 bg-purple-600 text-white rounded-lg">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" id="joinPrivateRoomModal">
+        <div class="bg-white rounded-lg p-6 w-96">
+            <h3 class="text-xl font-semibold mb-4" id="joinPrivateRoomTitle">Join Private Room</h3>
+            <input type="password" placeholder="Enter password" class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4" id="privateRoomPasswordInput">
+            <div class="flex justify-end space-x-3">
+                <button onclick="hideJoinPrivateRoomModal()" class="px-6 py-2 bg-gray-300 text-gray-800 rounded-lg">Cancel</button>
+                <button onclick="verifyAndJoinPrivateRoom()" class="px-6 py-2 bg-purple-600 text-white rounded-lg">Join</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let currentUser = null;
+        let currentRoom = null;
+        let rooms = []; 
+        let messages = {};
+        let typingUsers = {};
+        let typingTimer = null;
+        let roomToJoinPasswordProtected = null;
+        const chatBotUser = "ChatSync Bot";
+        const userModal = document.getElementById('userModal');
+        const usernameInput = document.getElementById('usernameInput');
+        const currentUserSpan = document.getElementById('currentUser');
+        const publicRoomList = document.getElementById('publicRoomList');
+        const privateRoomList = document.getElementById('privateRoomList');
+        const currentRoomHeading = document.getElementById('currentRoom');
+        const roomDescription = document.getElementById('roomDescription');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const typingUsersSpan = document.getElementById('typingUsers');
+        const onlineCountSpan = document.getElementById('onlineCount');
+        const userMenuBtn = document.getElementById('userMenuBtn');
+        const userMenu = document.getElementById('userMenu');
+        const createPrivateRoomModal = document.getElementById('createPrivateRoomModal');
+        const newPrivateRoomNameInput = document.getElementById('newPrivateRoomName');
+        const newPrivateRoomPasswordInput = document.getElementById('newPrivateRoomPassword');
+        const joinPrivateRoomModal = document.getElementById('joinPrivateRoomModal');
+        const joinPrivateRoomTitle = document.getElementById('joinPrivateRoomTitle');
+        const privateRoomPasswordInput = document.getElementById('privateRoomPasswordInput');
+        function init() {
+            loadRooms();
+            loadMessages(); 
+            renderRooms();
+            showUserModal();
+            setupEventListeners();
+            updateOnlineCount();
+        }
+        function showUserModal() {
+            userModal.classList.remove('hidden');
+            userModal.classList.add('flex');
+            usernameInput.focus();
+        }
+        function setUsername() {
+            const username = usernameInput.value.trim();
+            if (username) {
+                currentUser = username;
+                currentUserSpan.textContent = username;
+                userModal.classList.add('hidden');
+                userModal.classList.remove('flex');
+                localStorage.setItem('chatUser', username);
+                
+                showNotification(`Welcome, ${username}!`, 'success');
+            }
+        }
+        function changeUser() {
+            showUserModal();
+            userMenu.classList.add('hidden');
+        }
+        function renderRooms() {
+            publicRoomList.innerHTML = '';
+            privateRoomList.innerHTML = '';
+
+            const publicRooms = rooms.filter(room => !room.isPrivate);
+            const privateRooms = rooms.filter(room => room.isPrivate);
+
+            if (publicRooms.length === 0) {
+                publicRoomList.innerHTML = '<p class="text-gray-500 text-sm">No public rooms available.</p>';
+            } else {
+                publicRooms.forEach(room => {
+                    const roomElement = document.createElement('button');
+                    roomElement.className = 'w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors room-card';
+                    roomElement.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-medium text-gray-800">${room.name}</h3>
+                                <p class="text-sm text-gray-600">${room.users.length} users online</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </div>
+                    `;
+                    roomElement.addEventListener('click', () => joinRoom(room.id));
+                    publicRoomList.appendChild(roomElement);
+                });
+            }
+
+            if (privateRooms.length === 0) {
+                privateRoomList.innerHTML = '<p class="text-gray-500 text-sm">No private rooms created yet.</p>';
+            } else {
+                privateRooms.forEach(room => {
+                    const roomElement = document.createElement('button');
+                    roomElement.className = 'w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors room-card';
+                    roomElement.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-medium text-gray-800"><i class="fas fa-lock text-gray-500 mr-1"></i>${room.name}</h3>
+                                <p class="text-sm text-gray-600">${room.users.length} users online</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </div>
+                    `;
+                    roomElement.addEventListener('click', () => {
+                        if (room.password) {
+                            showJoinPrivateRoomModal(room.id, room.name);
+                        } else {
+                            joinRoom(room.id);
+                        }
+                    });
+                    privateRoomList.appendChild(roomElement);
+                });
+            }
+        }
+        function joinRoom(roomId) {
+            const room = rooms.find(r => r.id === roomId);
+            if (!room) return;
+            if (currentRoom) {
+                const prevRoom = rooms.find(r => r.id === currentRoom);
+                if (prevRoom) {
+                    prevRoom.users = prevRoom.users.filter(user => user !== currentUser);
+                }
+            }
+
+            currentRoom = roomId;
+            currentRoomHeading.textContent = room.name;
+            roomDescription.textContent = room.description;
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            if (!room.users.includes(currentUser)) {
+                room.users.push(currentUser);
+                updateOnlineCount();
+            }
+            saveRooms();
+            renderMessages();
+            showNotification(`Joined ${room.name}`, 'info');
+        }
+        function renderMessages() {
+            const roomMessages = messages[currentRoom] || [];
+            messagesContainer.innerHTML = '';
+
+            if (roomMessages.length === 0) {
+                messagesContainer.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-comment-slash text-4xl mb-3 text-gray-300"></i>
+                        <p>No messages yet. Be the first to start the conversation!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            roomMessages.forEach(msg => {
+                const messageElement = document.createElement('div');
+                messageElement.className = `message p-4 rounded-lg ${
+                    msg.user === currentUser 
+                    ? 'bg-purple-100 ml-12' 
+                    : 'bg-gray-100 mr-12'
+                }`;
+                if (msg.user === chatBotUser) {
+                    messageElement.classList.remove('ml-12');
+                    messageElement.classList.add('mr-12', 'bg-blue-100');
+                }
+                messageElement.innerHTML = `
+                    <div class="flex items-start space-x-3">
+                        <img src="https://placehold.co/40x40" alt="User avatar for ${msg.user}" class="w-8 h-8 rounded-full mt-1">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <span class="font-semibold ${msg.user === currentUser ? 'text-purple-800' : 'text-gray-800'}">${msg.user}</span>
+                                <span class="text-xs text-gray-500">${formatTime(msg.timestamp)}</span>
+                            </div>
+                            <p class="text-gray-700">${msg.text}</p>
+                        </div>
+                    </div>
+                `;
+                messagesContainer.appendChild(messageElement);
+            });
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text || !currentRoom) return;
+
+            const message = {
+                user: currentUser,
+                text: text,
+                timestamp: new Date().toISOString(),
+                room: currentRoom
+            };
+            if (!messages[currentRoom]) {
+                messages[currentRoom] = [];
+            }
+            messages[currentRoom].push(message);
+            saveMessages();
+            renderMessages();
+            messageInput.value = '';
+            hideTyping();
+            checkForBotReply(text);
+        }
+        function checkForBotReply(userMessageText) {
+            let botReplyText = '';
+            const lowerCaseMessage = userMessageText.toLowerCase();
+            if (lowerCaseMessage.includes('hello') || lowerCaseMessage.includes('hi')) {
+                botReplyText = 'Hello!..';
+            } else if (lowerCaseMessage.includes('how are you')) {
+                botReplyText = "I'm fine.What about you.?";
+            }else if (lowerCaseMessage.includes('i also good')) {
+                botReplyText = "Glad to hear";
+            } else if (lowerCaseMessage.includes('What time')) {
+                botReplyText = `The current time is ${new Date().toLocaleTimeString()}.`;
+            } else if (lowerCaseMessage.includes('Today date')) {
+                botReplyText = `Today's date is ${new Date().toLocaleDateString()}.`;
+            } else if (lowerCaseMessage.includes('help')) {
+                botReplyText = ' Try asking me about "tech", "gaming", or "music".';
+            } else if (lowerCaseMessage.includes('tech') && currentRoom === 'tech') {
+                botReplyText = 'The technology room is great for discussing the latest gadgets and software!';
+            } else if (lowerCaseMessage.includes('gaming') && currentRoom === 'gaming') {
+                botReplyText = 'Welcome to the gaming room! What games are you playing lately?';
+            } else if (lowerCaseMessage.includes('music') && currentRoom === 'music') {
+                botReplyText = 'Share your favorite tunes in the music room!';
+            } else if (lowerCaseMessage.includes('who are you')) {
+                botReplyText = 'I am ChatSync Bot, here to help and chat!';
+            } else if (lowerCaseMessage.includes('i love you')) {
+                botReplyText = 'owww!i love you too';
+            } else if (lowerCaseMessage.includes('thank you') || lowerCaseMessage.includes('thanks')) {
+                botReplyText = 'You\'re welcome!';
+            }
+            if (botReplyText) {
+                setTimeout(() => {
+                    const botMessage = {
+                        user: chatBotUser,
+                        text: botReplyText,
+                        timestamp: new Date().toISOString(),
+                        room: currentRoom
+                    };
+                    if (!messages[currentRoom]) {
+                        messages[currentRoom] = [];
+                    }
+                    messages[currentRoom].push(botMessage);
+                    saveMessages(); 
+                    renderMessages();
+                }, 1000);
+            }
+        }
+        function handleTyping() {
+            if (!currentRoom) return;
+            typingUsers[currentRoom] = typingUsers[currentRoom] || {};
+            typingUsers[currentRoom][currentUser] = Date.now();
+            showTyping();
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                if (typingUsers[currentRoom] && typingUsers[currentRoom][currentUser]) {
+                    delete typingUsers[currentRoom][currentUser];
+                }
+                hideTyping();
+            }, 1500); 
+        }
+        function showTyping() {
+            const roomTyping = typingUsers[currentRoom];
+            if (roomTyping) {
+                const usersTyping = Object.keys(roomTyping).filter(user => user !== currentUser);
+                if (usersTyping.length > 0) {
+                    typingIndicator.classList.remove('hidden');
+                    if (usersTyping.length === 1) {
+                        typingUsersSpan.textContent = usersTyping[0];
+                    } else if (usersTyping.length === 2) {
+                        typingUsersSpan.textContent = `${usersTyping[0]} and ${usersTyping[1]}`;
+                    } else {
+                        typingUsersSpan.textContent = 'Multiple users';
+                    }
+                } else {
+                    typingIndicator.classList.add('hidden');
+                }
+            }
+        }
+        function hideTyping() {
+            typingIndicator.classList.add('hidden');
+        }
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white notification ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 
+                'bg-blue-500'
+            }`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+        function updateOnlineCount() {
+            const allUsers = new Set();
+            rooms.forEach(room => {
+                room.users.forEach(user => {
+                    allUsers.add(user);
+                });
+            });
+            allUsers.add(chatBotUser); 
+            onlineCountSpan.textContent = `${allUsers.size} users online`;
+        }
+        function saveMessages() {
+            localStorage.setItem('chatMessages', JSON.stringify(messages)); 
+        }
+        function loadMessages() {
+            const savedMessages = localStorage.getItem('chatMessages');
+            if (savedMessages) {
+                messages = JSON.parse(savedMessages);
+            }
+        }
+        function saveRooms() {
+            localStorage.setItem('chatRooms', JSON.stringify(rooms));
+        }
+        function loadRooms() {
+            const savedRooms = localStorage.getItem('chatRooms');
+            if (savedRooms) {
+                rooms = JSON.parse(savedRooms);
+            } else {
+                rooms = [
+                    { id: 'general', name: 'General', description: 'General discussions and casual chat', users: [], isPrivate: false },
+                    { id: 'tech', name: 'Technology', description: 'Discuss the latest tech trends and innovations', users: [], isPrivate: false },
+                    { id: 'gaming', name: 'Gaming', description: 'Video games, consoles, and gaming culture', users: [], isPrivate: false },
+                    { id: 'music', name: 'Music', description: 'Share and discuss music from all genres', users: [], isPrivate: false },
+                    { id: 'movies', name: 'Movies & TV', description: 'Film and television discussions', users: [], isPrivate: false }
+                ];
+                saveRooms();
+            }
+        }
+        function showCreatePrivateRoomModal() {
+            createPrivateRoomModal.classList.remove('hidden');
+            createPrivateRoomModal.classList.add('flex');
+            newPrivateRoomNameInput.focus();
+        }
+        function hideCreatePrivateRoomModal() {
+            createPrivateRoomModal.classList.add('hidden');
+            createPrivateRoomModal.classList.remove('flex');
+            newPrivateRoomNameInput.value = '';
+            newPrivateRoomPasswordInput.value = '';
+        }
+        function createPrivateRoom() {
+            const roomName = newPrivateRoomNameInput.value.trim();
+            const roomPassword = newPrivateRoomPasswordInput.value.trim();
+
+            if (!roomName) {
+                showNotification('Room name cannot be empty!', 'error');
+                return;
+            }
+            const roomId = roomName.toLowerCase().replace(/\s/g, '-') + '-' + Date.now().toString().slice(-4);
+            const newRoom = {
+                id: roomId,
+                name: roomName,
+                description: 'A private chat room.',
+                users: [],
+                isPrivate: true,
+                password: roomPassword || null
+            };
+
+            rooms.push(newRoom);
+            saveRooms();
+            renderRooms();
+            hideCreatePrivateRoomModal();
+            showNotification(`Private room "${roomName}" created!`, 'success');
+        }
+        function showJoinPrivateRoomModal(roomId, roomName) {
+            roomToJoinPasswordProtected = roomId;
+            joinPrivateRoomTitle.textContent = `Join ${roomName}`;
+            privateRoomPasswordInput.value = ''; 
+            joinPrivateRoomModal.classList.remove('hidden');
+            joinPrivateRoomModal.classList.add('flex');
+            privateRoomPasswordInput.focus();
+        }
+        function hideJoinPrivateRoomModal() {
+            joinPrivateRoomModal.classList.add('hidden');
+            joinPrivateRoomModal.classList.remove('flex');
+            privateRoomPasswordInput.value = '';
+            roomToJoinPasswordProtected = null;
+        }
+        function verifyAndJoinPrivateRoom() {
+            const enteredPassword = privateRoomPasswordInput.value.trim();
+            const room = rooms.find(r => r.id === roomToJoinPasswordProtected);
+
+            if (!room) {
+                showNotification('Room not found!', 'error');
+                hideJoinPrivateRoomModal();
+                return;
+            }
+
+            if (room.password && enteredPassword !== room.password) {
+                showNotification('Incorrect password!', 'error');
+                privateRoomPasswordInput.value = ''; 
+                return;
+            }
+            hideJoinPrivateRoomModal();
+            joinRoom(roomToJoinPasswordProtected);
+        }
+        function setupEventListeners() {
+            sendButton.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            messageInput.addEventListener('input', handleTyping);
+            userMenuBtn.addEventListener('click', () => {
+                userMenu.classList.toggle('hidden');
+            });
+            document.addEventListener('click', (e) => {
+                if (!userMenuBtn.contains(e.target) && !userMenu.contains(e.target)) {
+                    userMenu.classList.add('hidden');
+                }
+            });
+            usernameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    setUsername();
+                }
+            });
+            newPrivateRoomNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    createPrivateRoom();
+                }
+            });
+            newPrivateRoomPasswordInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    createPrivateRoom();
+                }
+            });
+            privateRoomPasswordInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    verifyAndJoinPrivateRoom();
+                }
+            });
+        }
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
